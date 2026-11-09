@@ -144,7 +144,7 @@
   const CONFIG = {
     csvUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQZKAicbbJjDiALSUSx3JsR1CJYnHB0wm3aRUx5Hwz8I0VQdHHL7L370NMxyEzbrRyEGGw1JCIdyluW/pub?gid=1057503464&single=true&output=csv',
     formUrl: 'https://forms.gle/8ohT47bqRj2WsU1dA',
-    areas: ['宗像市', '福津市', '大島・地島', 'その他'],
+    areas: ['宗像市', '福津市', '鞍手町', '宮若市'],
     categories: ['祭り・マルシェ', '講座・体験', 'スポーツ', '展示・音楽・舞台', '子ども向け'],
   };
 
@@ -170,7 +170,7 @@
       organizer: 'Organizer', monthLabel: (y, m) => new Date(y, m - 1, 1).toLocaleDateString('en-US', { year: 'numeric', month: 'long' }),
       wd: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
       weekendLabel: (a, b) => b ? `Events on ${T.en.wd[a.getDay()]} ${fmtMD(a, 'en')} – ${T.en.wd[b.getDay()]} ${fmtMD(b, 'en')}` : `Events on ${T.en.wd[a.getDay()]} ${fmtMD(a, 'en')}`,
-      area: { '宗像市': 'Munakata', '福津市': 'Fukutsu', '大島・地島': 'Oshima & Jinoshima', 'その他': 'Other' },
+      area: { '宗像市': 'Munakata', '福津市': 'Fukutsu', '鞍手町': 'Kurate', '宮若市': 'Miyawaka' },
       cat: { '祭り・マルシェ': 'Festivals & Markets', '講座・体験': 'Workshops', 'スポーツ': 'Sports', '展示・音楽・舞台': 'Arts & Music', '子ども向け': 'For Kids' },
       fee: { '無料': 'Free', '有料': 'Paid' },
     },
