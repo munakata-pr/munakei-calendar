@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>宗像・福津 イベントカレンダー（試作）</title>
+<style>
+  :root {
+    --ink: #1c2430;
+    --ink-sub: #5b6573;
+    --line: #e3e7ec;
+    --bg: #ffffff;
+    --bg-soft: #f4f6f8;
+    --accent: #0f4c81;
+    --accent-soft: #e6eef6;
+    --ended: #9aa3ad;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); }
+  body {
+    font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Noto Sans JP", "Yu Gothic", Meiryo, sans-serif;
+    font-size: 15px; line-height: 1.6; padding: 16px;
+    -webkit-text-size-adjust: 100%;
+  }
+  a { color: var(--accent); }
+  .cal { max-width: 760px; margin: 0 auto; }
+
+  /* ヘッダー */
+  .cal-head { display: grid; gap: 12px; margin-bottom: 14px; }
+  .cal-title { margin: 0; font-size: 20px; line-height: 1.4; word-break: keep-all; overflow-wrap: anywhere; }
+  .cal-sub { margin: 2px 0 0; font-size: 13px; color: var(--ink-sub); }
+  .head-actions { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-height: 40px; padding: 0 14px; border-radius: 999px;
+    border: 1px solid var(--accent); background: var(--bg); color: var(--accent);
+    font: inherit; font-size: 14px; font-weight: 600; white-space: nowrap;
+    text-decoration: none; cursor: pointer;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn:focus-visible, .chip:focus-visible, .seg button:focus-visible { outline: 3px solid #8fb4d9; outline-offset: 2px; }
+
+  /* 表示の切替 */
+  .seg { display: grid; grid-template-columns: 1fr 1fr; background: var(--bg-soft); border-radius: 999px; padding: 4px; margin-bottom: 12px; }
+  .seg button {
+    border: 0; background: transparent; border-radius: 999px; min-height: 36px;
+    font: inherit; font-size: 14px; font-weight: 600; color: var(--ink-sub); cursor: pointer; white-space: nowrap;
+  }
+  .seg button[aria-pressed="true"] { background: var(--bg); color: var(--accent); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+
+  /* 絞り込み（横スクロールで1行に保つ） */
+  .filters { display: grid; gap: 8px; margin-bottom: 12px; }
+  .chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+  .chips::-webkit-scrollbar { display: none; }
+  .chips-label { font-size: 12px; color: var(--ink-sub); }
+  .chip {
+    flex: 0 0 auto; border: 1px solid var(--line); background: var(--bg); color: var(--ink);
+    border-radius: 999px; padding: 5px 12px; font: inherit; font-size: 13px; white-space: nowrap; cursor: pointer;
+  }
+  .chip[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+
+  /* 月の移動 */
+  .month-nav { display: grid; grid-template-columns: 44px 1fr 44px auto; align-items: center; gap: 6px; margin-bottom: 12px; }
+  .month-nav .label { text-align: center; font-weight: 700; font-size: 17px; white-space: nowrap; }
+  .icon-btn { min-height: 40px; border: 1px solid var(--line); background: var(--bg); border-radius: var(--radius); font-size: 18px; cursor: pointer; color: var(--ink); }
+  .range-label { font-weight: 700; margin: 0 0 12px; font-size: 16px; }
+
+  /* イベント */
+  .list { display: grid; gap: 10px; }
+  .ev { display: grid; grid-template-columns: 64px 1fr; gap: 12px; padding: 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); }
+  .ev-date { text-align: center; background: var(--accent-soft); color: var(--accent); border-radius: 8px; padding: 8px 2px; align-self: start; }
+  .ev-date .d { display: block; font-size: 18px; font-weight: 700; line-height: 1.2; }
+  .ev-date .w { display: block; font-size: 12px; }
+  .ev-date .to { display: block; font-size: 11px; line-height: 1.3; margin-top: 4px; }
+  .ev-tags { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; margin-bottom: 4px; }
+  .ev-tags::-webkit-scrollbar { display: none; }
+  .tag { flex: 0 0 auto; font-size: 11px; padding: 1px 8px; border-radius: 999px; background: var(--bg-soft); color: var(--ink-sub); white-space: nowrap; }
+  .tag-area { background: var(--accent); color: #fff; }
+  .tag-ended { background: var(--ended); color: #fff; }
+  .ev h3 { margin: 0 0 4px; font-size: 16px; line-height: 1.45; overflow-wrap: anywhere; }
+  .ev .meta { margin: 0 0 6px; font-size: 13px; color: var(--ink-sub); overflow-wrap: anywhere; }
+  .ev .desc { margin: 0 0 6px; font-size: 14px; overflow-wrap: anywhere; }
+  .ev .org { margin: 0 0 8px; font-size: 12px; color: var(--ink-sub); overflow-wrap: anywhere; }
+  .ev-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 6px; }
+  .ev-actions .btn { min-height: 36px; font-size: 13px; }
+  .ev.is-ended { opacity: .62; }
+  .ev.is-ended .ev-date { background: var(--bg-soft); color: var(--ended); }
+
+  .ended-box { margin-top: 14px; }
+  .ended-box summary { cursor: pointer; color: var(--ink-sub); font-size: 14px; margin-bottom: 10px; }
+  .empty { padding: 28px 16px; text-align: center; color: var(--ink-sub); background: var(--bg-soft); border-radius: var(--radius); }
+  .empty a { display: inline-block; margin-top: 8px; }
+  .status { padding: 24px; text-align: center; color: var(--ink-sub); }
+  .cal-foot { margin-top: 18px; font-size: 12px; color: var(--ink-sub); text-align: center; }
+
+  @media (min-width: 600px) {
+    .cal-head { grid-template-columns: 1fr auto; align-items: end; }
+    .ev { grid-template-columns: 76px 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="cal" id="app">
+  <header class="cal-head">
+    <div>
+      <h1 class="cal-title" id="t-title"></h1>
+      <p class="cal-sub" id="t-sub"></p>
+    </div>
+    <div class="head-actions">
+      <a class="btn btn-primary" id="form-btn" target="_blank" rel="noopener"></a>
+      <button class="btn" id="lang-btn" type="button"></button>
+    </div>
+  </header>
+
+  <div class="seg" role="group" id="view-seg">
+    <button type="button" data-view="weekend"></button>
+    <button type="button" data-view="month"></button>
+  </div>
+
+  <div class="filters">
+    <div class="chips" role="group" id="area-chips"></div>
+    <div class="chips" role="group" id="cat-chips"></div>
+  </div>
+
+  <div id="month-nav" class="month-nav" hidden>
+    <button class="icon-btn" type="button" id="prev" aria-label="前の月">‹</button>
+    <div class="label" id="month-label"></div>
+    <button class="icon-btn" type="button" id="next" aria-label="次の月">›</button>
+    <button class="btn" type="button" id="this-month"></button>
+  </div>
+  <p class="range-label" id="range-label" hidden></p>
+
+  <div id="content"><p class="status" id="status"></p></div>
+
+  <p class="cal-foot">Powered by <a href="https://munakata.keizai.biz/" target="_blank" rel="noopener">宗像経済新聞</a></p>
+</div>
+
+<script>
+(() => {
+  // ===== 設定（本番では媒体ごとにここを変える） =====
+  const CONFIG = {
+    csvUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQZKAicbbJjDiALSUSx3JsR1CJYnHB0wm3aRUx5Hwz8I0VQdHHL7L370NMxyEzbrRyEGGw1JCIdyluW/pub?gid=1057503464&single=true&output=csv',
+    formUrl: 'https://forms.gle/8ohT47bqRj2WsU1dA',
+    areas: ['宗像市', '福津市', '大島・地島', 'その他'],
+    categories: ['祭り・マルシェ', '講座・体験', 'スポーツ', '展示・音楽・舞台', '子ども向け'],
+  };
+
+  const T = {
+    ja: {
+      title: '宗像・福津 イベントカレンダー', sub: '宗像経済新聞の編集部が確認して掲載しています',
+      form: 'イベントを登録する', lang: 'EN', weekend: '今週末', month: '月ごと', thisMonth: '今月',
+      all: 'すべて', allCat: 'すべてのジャンル', loading: 'イベント情報を読み込み中…',
+      error: 'イベント情報を読み込めませんでした。時間をおいて再度お試しください。',
+      empty: 'この条件のイベントはまだ登録されていません。', emptyLink: 'イベントを登録する →',
+      ended: '終了', endedBox: n => `終了したイベント（${n}件）`, detail: '詳しく見る', article: '取材記事を読む',
+      organizer: '主催', monthLabel: (y, m) => `${y}年${m}月`, wd: ['日', '月', '火', '水', '木', '金', '土'],
+      weekendLabel: (a, b) => b ? `${fmtMD(a, 'ja')}（${T.ja.wd[a.getDay()]}）・${b.getDate()}日（${T.ja.wd[b.getDay()]}）のイベント` : `${fmtMD(a, 'ja')}（${T.ja.wd[a.getDay()]}）のイベント`,
+      area: { }, cat: { }, fee: { },
+    },
+    en: {
+      title: 'Munakata & Fukutsu Event Calendar', sub: 'Events reviewed by the Munakata Keizai Shimbun editorial team',
+      form: 'Submit an event', lang: '日本語', weekend: 'This weekend', month: 'By month', thisMonth: 'Today',
+      all: 'All areas', allCat: 'All genres', loading: 'Loading events…',
+      error: 'Could not load events. Please try again later.',
+      empty: 'No events match these filters yet.', emptyLink: 'Submit an event →',
+      ended: 'Ended', endedBox: n => `Past events (${n})`, detail: 'Details', article: 'Read our article',
+      organizer: 'Organizer', monthLabel: (y, m) => new Date(y, m - 1, 1).toLocaleDateString('en-US', { year: 'numeric', month: 'long' }),
+      wd: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+      weekendLabel: (a, b) => b ? `Events on ${T.en.wd[a.getDay()]} ${fmtMD(a, 'en')} – ${T.en.wd[b.getDay()]} ${fmtMD(b, 'en')}` : `Events on ${T.en.wd[a.getDay()]} ${fmtMD(a, 'en')}`,
+      area: { '宗像市': 'Munakata', '福津市': 'Fukutsu', '大島・地島': 'Oshima & Jinoshima', 'その他': 'Other' },
+      cat: { '祭り・マルシェ': 'Festivals & Markets', '講座・体験': 'Workshops', 'スポーツ': 'Sports', '展示・音楽・舞台': 'Arts & Music', '子ども向け': 'For Kids' },
+      fee: { '無料': 'Free', '有料': 'Paid' },
+    },
+  };
+
+  // ===== 状態（URL の ?area= ?view= ?lang= ?today= で初期値を指定できる） =====
+  const params = new URLSearchParams(location.search);
+  const today = parseDate(params.get('today')) || startOfDay(new Date());
+  const state = {
+    lang: params.get('lang') === 'en' ? 'en' : 'ja',
+    view: params.get('view') === 'month' ? 'month' : 'weekend',
+    area: CONFIG.areas.includes(params.get('area')) ? params.get('area') : 'all',
+    cat: 'all',
+    ym: [today.getFullYear(), today.getMonth() + 1],
+    events: null, failed: false,
+  };
+
+  // ===== ユーティリティ =====
+  function startOfDay(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+  function parseDate(s) {
+    const m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec((s || '').trim());
+    return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null;
+  }
+  function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
+  function fmtMD(d, lang) { return lang === 'en' ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : `${d.getMonth() + 1}月${d.getDate()}日`; }
+  function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+  function safeUrl(u) { try { const x = new URL(u); return /^https?:$/.test(x.protocol) ? x.href : ''; } catch { return ''; } }
+  const t = () => T[state.lang];
+  const label = (kind, v) => state.lang === 'en' ? (T.en[kind][v] || v) : v;
+  const pick = (ev, key) => state.lang === 'en' ? (ev[key + 'En'] || ev[key]) : ev[key];
+
+  // CSV（引用符・改行入りのセルに対応）
+  function parseCsv(text) {
+    const rows = []; let row = [], cell = '', q = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (q) {
+        if (c === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; }
+        else cell += c;
+      } else if (c === '"') q = true;
+      else if (c === ',') { row.push(cell); cell = ''; }
+      else if (c === '\n') { row.push(cell); rows.push(row); row = []; cell = ''; }
+      else if (c !== '\r') cell += c;
+    }
+    if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
+    const head = rows.shift() || [];
+    return rows.filter(r => r.some(v => v.trim() !== '')).map(r => Object.fromEntries(head.map((h, i) => [h.trim(), (r[i] || '').trim()])));
+  }
+
+  function normalize(raw) {
+    return raw.map(r => {
+      const start = parseDate(r.startDate);
+      if (!start || !r.title) return null;
+      let end = parseDate(r.endDate) || start;
+      if (end < start) end = start;
+      return { ...r, start, end };
+    }).filter(Boolean).sort((a, b) => a.start - b.start || a.end - b.end);
+  }
+
+  // ===== 期間の計算 =====
+  function weekendRange() {
+    const dow = today.getDay();
+    if (dow === 0) return [today, today];               // 日曜は今日だけ
+    const sat = addDays(today, 6 - dow);                // 次の土曜（今日が土曜なら今日）
+    return [sat, addDays(sat, 1)];
+  }
+  function monthRange() {
+    const [y, m] = state.ym;
+    return [new Date(y, m - 1, 1), new Date(y, m, 0)];
+  }
+  const overlaps = (ev, a, b) => ev.start <= b && ev.end >= a;
+
+  // ===== 描画 =====
+  function renderStatic() {
+    document.documentElement.lang = state.lang;
+    document.getElementById('t-title').textContent = t().title;
+    document.getElementById('t-sub').textContent = t().sub;
+    const form = document.getElementById('form-btn');
+    form.textContent = t().form; form.href = CONFIG.formUrl;
+    document.getElementById('lang-btn').textContent = t().lang;
+    document.querySelectorAll('#view-seg button').forEach(b => {
+      b.textContent = t()[b.dataset.view];
+      b.setAttribute('aria-pressed', String(b.dataset.view === state.view));
+    });
+    document.getElementById('this-month').textContent = t().thisMonth;
+    renderChips('area-chips', ['all', ...CONFIG.areas], state.area, v => v === 'all' ? t().all : label('area', v), v => { state.area = v; render(); });
+    renderChips('cat-chips', ['all', ...CONFIG.categories], state.cat, v => v === 'all' ? t().allCat : label('cat', v), v => { state.cat = v; render(); });
+  }
+
+  function renderChips(id, values, current, text, onPick) {
+    const box = document.getElementById(id);
+    box.innerHTML = values.map(v => `<button type="button" class="chip" data-v="${esc(v)}" aria-pressed="${v === current}">${esc(text(v))}</button>`).join('');
+    box.querySelectorAll('.chip').forEach(b => b.addEventListener('click', () => onPick(b.dataset.v)));
+  }
+
+  function card(ev) {
+    const ended = ev.end < today;
+    const multi = ev.end > ev.start;
+    const L = state.lang;
+    const d = L === 'en' ? ev.start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : `${ev.start.getMonth() + 1}/${ev.start.getDate()}`;
+    const to = multi ? (L === 'en' ? `– ${ev.end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : `〜${ev.end.getMonth() + 1}/${ev.end.getDate()}`) : '';
+    const url = safeUrl(ev.url), art = safeUrl(ev.articleUrl);
+    const tags = [
+      `<span class="tag tag-area">${esc(label('area', ev.area))}</span>`,
+      ev.category ? `<span class="tag">${esc(label('cat', ev.category))}</span>` : '',
+      ev.fee ? `<span class="tag">${esc(label('fee', ev.fee))}</span>` : '',
+      ended ? `<span class="tag tag-ended">${esc(t().ended)}</span>` : '',
+    ].join('');
+    const meta = [pick(ev, 'time'), pick(ev, 'venue')].filter(Boolean).map(esc).join(' ／ ');
+    const actions = [
+      url ? `<a class="btn" href="${esc(url)}" target="_blank" rel="noopener">${esc(t().detail)}</a>` : '',
+      art ? `<a class="btn btn-primary" href="${esc(art)}" target="_blank" rel="noopener">${esc(t().article)}</a>` : '',
+    ].join('');
+    return `<article class="ev${ended ? ' is-ended' : ''}">
+      <div class="ev-date"><span class="d">${esc(d)}</span><span class="w">${esc(t().wd[ev.start.getDay()])}</span>${to ? `<span class="to">${esc(to)}</span>` : ''}</div>
+      <div>
+        <div class="ev-tags">${tags}</div>
+        <h3>${esc(pick(ev, 'title'))}</h3>
+        ${meta ? `<p class="meta">${meta}</p>` : ''}
+        ${ev.description ? `<p class="desc">${esc(pick(ev, 'description'))}</p>` : ''}
+        ${ev.organizer ? `<p class="org">${esc(t().organizer)}：${esc(pick(ev, 'organizer'))}</p>` : ''}
+        ${actions ? `<div class="ev-actions">${actions}</div>` : ''}
+      </div>
+    </article>`;
+  }
+
+  function render() {
+    renderStatic();
+    const content = document.getElementById('content');
+    const monthNav = document.getElementById('month-nav');
+    const rangeLabel = document.getElementById('range-label');
+    monthNav.hidden = state.view !== 'month';
+    rangeLabel.hidden = state.view !== 'weekend';
+
+    if (state.failed) { content.innerHTML = `<p class="status">${esc(t().error)}</p>`; return notifyHeight(); }
+    if (!state.events) { content.innerHTML = `<p class="status">${esc(t().loading)}</p>`; return notifyHeight(); }
+
+    let a, b;
+    if (state.view === 'weekend') {
+      [a, b] = weekendRange();
+      rangeLabel.textContent = t().weekendLabel(a, b > a ? b : null);
+    } else {
+      [a, b] = monthRange();
+      document.getElementById('month-label').textContent = t().monthLabel(...state.ym);
+    }
+    const hits = state.events.filter(ev =>
+      overlaps(ev, a, b) &&
+      (state.area === 'all' || ev.area === state.area) &&
+      (state.cat === 'all' || ev.category === state.cat));
+    const upcoming = hits.filter(ev => ev.end >= today);
+    const past = hits.filter(ev => ev.end < today);
+
+    if (!upcoming.length && !past.length) {
+      content.innerHTML = `<div class="empty">${esc(t().empty)}<br><a href="${esc(CONFIG.formUrl)}" target="_blank" rel="noopener">${esc(t().emptyLink)}</a></div>`;
+    } else {
+      content.innerHTML =
+        (upcoming.length ? `<div class="list">${upcoming.map(card).join('')}</div>` : `<div class="empty">${esc(t().empty)}</div>`) +
+        (past.length ? `<details class="ended-box"><summary>${esc(t().endedBox(past.length))}</summary><div class="list">${past.map(card).join('')}</div></details>` : '');
+      content.querySelectorAll('details').forEach(d => d.addEventListener('toggle', notifyHeight));
+    }
+    notifyHeight();
+  }
+
+  // ===== 埋め込み先へ高さを知らせる（iframe の自動リサイズ用） =====
+  // requestAnimationFrame は描画されていないタブでは動かないので、タイマーでまとめて送る
+  let heightTimer = null, lastSent = 0;
+  function notifyHeight() {
+    if (window.parent === window) return;
+    clearTimeout(heightTimer);
+    heightTimer = setTimeout(() => {
+      // documentElement.scrollHeight は iframe の高さ未満に縮まないので、本文の実寸で測る
+      const h = Math.ceil(document.body.getBoundingClientRect().height);
+      if (h === lastSent) return;
+      lastSent = h;
+      window.parent.postMessage({ type: 'resize-calendar', height: h }, '*');
+    }, 50);
+  }
+  if ('ResizeObserver' in window) new ResizeObserver(notifyHeight).observe(document.body);
+
+  // ===== 操作 =====
+  document.getElementById('lang-btn').addEventListener('click', () => { state.lang = state.lang === 'ja' ? 'en' : 'ja'; render(); });
+  document.querySelectorAll('#view-seg button').forEach(b => b.addEventListener('click', () => { state.view = b.dataset.view; render(); }));
+  document.getElementById('prev').addEventListener('click', () => { let [y, m] = state.ym; m--; if (m < 1) { m = 12; y--; } state.ym = [y, m]; render(); });
+  document.getElementById('next').addEventListener('click', () => { let [y, m] = state.ym; m++; if (m > 12) { m = 1; y++; } state.ym = [y, m]; render(); });
+  document.getElementById('this-month').addEventListener('click', () => { state.ym = [today.getFullYear(), today.getMonth() + 1]; render(); });
+
+  // ===== 読み込み =====
+  render();
+  fetch(CONFIG.csvUrl, { cache: 'no-store' })
+    .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+    .then(text => { state.events = normalize(parseCsv(text)); render(); })
+    .catch(err => { console.error('[calendar]', err); state.failed = true; render(); });
+})();
+</script>
+</body>
+</html>
